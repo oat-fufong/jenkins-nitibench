@@ -26,83 +26,80 @@ import gc
 
 tqdm.pandas()
 
-async def evaluate_ragger(ragger: Ragger, golden_retriever: bool = False, batch_size: int = 1, setting_name: str = ""):
-    
+async def evaluate_ragger(ragger: Ragger, golden_retriever: bool = False, batch_size: int = 1, setting_name: str = "", datasets: list = ["tax", "wangchan"]):
+
     os.makedirs(setting_name, exist_ok=True)
-    
+
     tax_df = ragger.dataset.tax_df
     wangchan_df = ragger.dataset.wangchan_df
-    
+
     #First, do tax
-    tax_results = []
-    if os.path.exists(os.path.join(setting_name, "tax_response.json")):
-        with open(os.path.join(setting_name, "tax_response.json"), "r") as f:
-            tax_results = json.load(f)
-    for i in tqdm(range(len(tax_results), tax_df.shape[0], batch_size)):
-        
-        job_params = tax_df.iloc[i: i+batch_size][["idx", "ข้อหารือ", "actual_relevant_laws"]].to_dict(orient="records")
-        if isinstance(job_params, dict):
-            job_params = [job_params]
+    if "tax" in datasets:
+        tax_results = []
+        if os.path.exists(os.path.join(setting_name, "tax_response.json")):
+            with open(os.path.join(setting_name, "tax_response.json"), "r") as f:
+                tax_results = json.load(f)
+        for i in tqdm(range(len(tax_results), tax_df.shape[0], batch_size)):
 
-        indices = [p["idx"] for p in job_params]
-        queries = [p["ข้อหารือ"] for p in job_params]
-        
-        if golden_retriever:
-            relevant_laws = [p["actual_relevant_laws"] for p in job_params]
-            
-        else:
-            relevant_laws = [None] * len(indices)
-            
-        dataset_names = ["tax"] * len(indices)
-               
-        start = time.time()
-        jobs = ragger.rag_multi(indices=indices, queries=queries, relevant_laws=relevant_laws, dataset_names=dataset_names)
-            
-        results = await jobs
-        
-        tax_results.extend(results)
-        with open(os.path.join(setting_name, "tax_response.json"), "w") as f:
-            json.dump(tax_results, f)
-        
-        time.sleep(max(0, 30 - (time.time() - start)))
-        
+            job_params = tax_df.iloc[i: i+batch_size][["idx", "ข้อหารือ", "actual_relevant_laws"]].to_dict(orient="records")
+            if isinstance(job_params, dict):
+                job_params = [job_params]
 
-        
+            indices = [p["idx"] for p in job_params]
+            queries = [p["ข้อหารือ"] for p in job_params]
+
+            if golden_retriever:
+                relevant_laws = [p["actual_relevant_laws"] for p in job_params]
+            else:
+                relevant_laws = [None] * len(indices)
+
+            dataset_names = ["tax"] * len(indices)
+
+            start = time.time()
+            jobs = ragger.rag_multi(indices=indices, queries=queries, relevant_laws=relevant_laws, dataset_names=dataset_names)
+            results = await jobs
+
+            tax_results.extend(results)
+            with open(os.path.join(setting_name, "tax_response.json"), "w") as f:
+                json.dump(tax_results, f)
+
+            time.sleep(max(0, 30 - (time.time() - start)))
+
     #Next, do wangchan
-    wangchan_results = []
-    if os.path.exists(os.path.join(setting_name, "wangchan_response.json")):
-        with open(os.path.join(setting_name, "wangchan_response.json"), "r") as f:
-            wangchan_results = json.load(f)
-    
-    print(len(wangchan_results))
-    for i in tqdm(range(len(wangchan_results), wangchan_df.shape[0], batch_size)):
-        
-        job_params = wangchan_df.iloc[i: i+batch_size][["idx", "question", "relevant_laws"]].to_dict(orient="records")
-        if isinstance(job_params, dict):
-            job_params = [job_params]
-                
-        indices = [p["idx"] for p in job_params]
-        queries = [p["question"] for p in job_params]
-        
-        if golden_retriever:
-            relevant_laws = [p["relevant_laws"] for p in job_params]
-            
-        else:
-            relevant_laws = [None] * len(indices)
-                   
-        dataset_names = ["wangchan"] * len(indices)
-            
-        jobs = ragger.rag_multi(indices=indices, queries=queries, relevant_laws=relevant_laws, dataset_names=dataset_names)
-        
-        start = time.time()
-        results = await jobs
-        
-        wangchan_results.extend(results)
-        
-        with open(os.path.join(setting_name, "wangchan_response.json"), "w") as f:
-            json.dump(wangchan_results, f)
-        
-        time.sleep(max(0, 60 - (time.time() - start)))
+    if "wangchan" in datasets:
+        wangchan_results = []
+        if os.path.exists(os.path.join(setting_name, "wangchan_response.json")):
+            with open(os.path.join(setting_name, "wangchan_response.json"), "r") as f:
+                wangchan_results = json.load(f)
+
+        print(len(wangchan_results))
+        for i in tqdm(range(len(wangchan_results), wangchan_df.shape[0], batch_size)):
+
+            job_params = wangchan_df.iloc[i: i+batch_size][["idx", "question", "relevant_laws"]].to_dict(orient="records")
+            if isinstance(job_params, dict):
+                job_params = [job_params]
+
+            indices = [p["idx"] for p in job_params]
+            queries = [p["question"] for p in job_params]
+
+            if golden_retriever:
+                relevant_laws = [p["relevant_laws"] for p in job_params]
+            else:
+                relevant_laws = [None] * len(indices)
+
+            dataset_names = ["wangchan"] * len(indices)
+
+            jobs = ragger.rag_multi(indices=indices, queries=queries, relevant_laws=relevant_laws, dataset_names=dataset_names)
+
+            start = time.time()
+            results = await jobs
+
+            wangchan_results.extend(results)
+
+            with open(os.path.join(setting_name, "wangchan_response.json"), "w") as f:
+                json.dump(wangchan_results, f)
+
+            time.sleep(max(0, 60 - (time.time() - start)))
         
 
         
@@ -126,6 +123,7 @@ async def main(args):
     
     batch_size = config.get("batch_size", 1)
     output_path = config["output_path"]
+    datasets = config.get("datasets", ["tax", "wangchan"])
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(config.get("device", "0"))
     print(os.environ["CUDA_VISIBLE_DEVICES"])
@@ -154,7 +152,7 @@ async def main(args):
                             prompt_manager = pm,
                             llm = llm)
             
-            await evaluate_ragger(ragger, batch_size = batch_size, setting_name = os.path.join(output_path, k))
+            await evaluate_ragger(ragger, batch_size=batch_size, setting_name=os.path.join(output_path, k), datasets=datasets)
             
             del llm_config[k]
             del ragger
@@ -179,7 +177,7 @@ async def main(args):
                         prompt_manager = pm,
                         llm = llm)
 
-            await evaluate_ragger(ragger, batch_size = batch_size, setting_name = os.path.join(output_path, setting_name))
+            await evaluate_ragger(ragger, batch_size=batch_size, setting_name=os.path.join(output_path, setting_name), datasets=datasets)
 
             del ragger
             gc.collect()
@@ -210,7 +208,7 @@ async def main(args):
                             llm = llm,
                             augmenter=augmenter)
                 
-                await evaluate_ragger(ragger, batch_size = batch_size, golden_retriever=True, setting_name = os.path.join(output_path, setting_name))
+                await evaluate_ragger(ragger, batch_size=batch_size, golden_retriever=True, setting_name=os.path.join(output_path, setting_name), datasets=datasets)
                 
                 del ragger
                 gc.collect()
@@ -246,7 +244,7 @@ async def main(args):
                                 augmenter=augmenter,
                                 retriever=retriever)
 
-                    await evaluate_ragger(ragger, batch_size = batch_size, golden_retriever=False, setting_name = os.path.join(output_path, setting_name))
+                    await evaluate_ragger(ragger, batch_size=batch_size, golden_retriever=False, setting_name=os.path.join(output_path, setting_name), datasets=datasets)
                     del ragger
                     gc.collect()
                     torch.cuda.empty_cache()
@@ -278,7 +276,7 @@ async def main(args):
                     
                     
 
-                    await evaluate_ragger(ragger, batch_size = batch_size, golden_retriever=False, setting_name = os.path.join(output_path, setting_name))
+                    await evaluate_ragger(ragger, batch_size=batch_size, golden_retriever=False, setting_name=os.path.join(output_path, setting_name), datasets=datasets)
                     
                     del ragger
                     gc.collect()
