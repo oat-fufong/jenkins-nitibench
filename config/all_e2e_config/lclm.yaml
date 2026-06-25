@@ -14,13 +14,13 @@ augmenter_config:
       
 llm_config:      
     gemini-1.5-pro-lc:
-          model: gemini-1.5-pro-002
+          model: gemini-2.5-flash-lite
           generation_config:
               max_output_tokens: 2048
               temperature: 0.5
               candidate_count: 1
               response_mime_type: "application/json"
-          long_context: True 
+          long_context: False 
       
 output_path: /app/LRG/results/e2e/v0.1/main_table
 batch_size: 2
