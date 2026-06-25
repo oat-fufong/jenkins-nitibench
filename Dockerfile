@@ -4,7 +4,8 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install gcc git python3-dev -y
 
-RUN git clone https://github.com/run-llama/llama_index.git /app/llama_index 
+# RUN git clone https://github.com/run-llama/llama_index.git /app/llama_index 
+RUN git clone --depth 1 --branch v0.12.52 https://github.com/run-llama/llama_index.git /app/llama_index
 
 COPY . /app/LRG 
 
@@ -22,6 +23,10 @@ RUN pip install -e /app/llama_index/llama-index-integrations/embeddings/llama-in
 RUN pip install -e /app/llama_index/llama-index-integrations/indices/llama-index-indices-managed-bge-m3
 RUN pip install -e /app/llama_index/llama-index-integrations/indices/llama-index-indices-managed-colbert
 RUN pip install -e /app/llama_index/llama-index-integrations/retrievers/llama-index-retrievers-bm25
+
+# Version Pins
+RUN pip install "langchain==0.1.20"
+RUN pip install "transformers==4.49.0"
 
 # Run the Python script to download and preprocess data
 RUN mv /app/LRG/test_data /app
