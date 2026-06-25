@@ -57,7 +57,7 @@ class GeminiModel(object):
 
         
         cache = caching.CachedContent.create(
-                                                model="models/gemini-1.5-pro-002",
+                                                model="models/gemini-2.5-flash-lite",
                                                 display_name='law_context', # used to identify the cache
                                                 system_instruction=system,
                                                 contents=contents,
