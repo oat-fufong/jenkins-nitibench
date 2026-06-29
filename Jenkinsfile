@@ -17,6 +17,14 @@ pipeline {
             name: 'CONFIG_PATH',
             defaultValue: '/app/LRG/config/all_e2e_config/lclm.yaml',
         )
+        string(
+            name: 'MOUNT_CACHE_PATH',
+            defaultValue: '/mnt/filestore/nitibench/cache',
+        )
+        string(
+            name: 'MOUNT_RESULT_PATH',
+            defaultValue: '/mnt/filestore/nitibench/results',
+        )
     }
     environment {
         HTTP_PROXY = 'http://10.0.0.3:3128'
@@ -26,6 +34,8 @@ pipeline {
         IMAGE_TAG = "${params.IMAGE_TAG}"
         CONTAINER_NAME = "${params.CONTAINER_NAME}"
         CONFIG_PATH = "${params.CONFIG_PATH}"
+        MOUNT_CACHE_PATH = "${params.MOUNT_CACHE_PATH}"
+        MOUNT_RESULT_PATH = "${params.MOUNT_RESULT_PATH}"
     }
 
     stages {

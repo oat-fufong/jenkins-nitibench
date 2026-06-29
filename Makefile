@@ -17,6 +17,8 @@ run:
 		--name "$(CONTAINER_NAME)" \
 		-e HF_TOKEN="$(HF_TOKEN)" \
 		-e GEMINI_API_KEY="$(GEMINI_API_KEY)" \
+		-v ${MOUNT_CACHE_PATH}:/app/cache \
+		-v ${MOUNT_RESULT_PATH}:/app/LRG/results \
 		$(IMAGE_NAME):$(IMAGE_TAG) bash
 
 exec:
