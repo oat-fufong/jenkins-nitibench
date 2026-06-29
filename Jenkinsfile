@@ -70,15 +70,18 @@ pipeline {
         }
     }
     post {
+        always {
+            sh '''
+            make clean
+            '''
+        }
         success {
             sh '''
-            make stop
             echo "Success"
             '''
         }
         unsuccessful {
             sh '''
-            make stop
             echo "Unsuccessful"
             '''
         }
