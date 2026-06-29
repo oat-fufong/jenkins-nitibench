@@ -1,6 +1,7 @@
 clean:
-	ls -al
+	docker stop "$(CONTAINER_NAME)" || true
 	docker rm "$(CONTAINER_NAME)" || true
+	docker rmi "$(IMAGE_NAME):$(IMAGE_TAG)" || true
 
 stop:
 	docker stop "$(CONTAINER_NAME)" || true
