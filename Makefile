@@ -1,4 +1,5 @@
 clean:
+	ls -al
 	docker rm "$(CONTAINER_NAME)" || true
 
 stop:
