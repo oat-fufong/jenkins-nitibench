@@ -1,6 +1,6 @@
 data_config:
     golden:
-          node_path: /app/LRG/chunking/golden/nodes.json
+          node_path: /app/LRG/chunking/reduced_golden/nodes.json
 
 retriever_config:
     human-finetuned-bge-m3:
