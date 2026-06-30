@@ -122,9 +122,10 @@ class BGEM3Index(BaseIndex[IndexDict]):
             return_colbert_vecs=True,
         )
         
-        self.cache_pad_docs = [torch.from_numpy(p_reps) for p_reps in self._multi_embed_store["colbert_vecs"]]
-        self.cache_pad_docs_size = torch.from_numpy(np.array([x.size(0) for x in self.cache_pad_docs])).to("cuda")
-        self.cache_pad_docs = torch.nn.utils.rnn.pad_sequence(self.cache_pad_docs, batch_first=True).to("cuda")
+        # cache_pad_docs is unused in query() — skipped to avoid huge CPU allocation
+        # self.cache_pad_docs = [torch.from_numpy(p_reps) for p_reps in self._multi_embed_store["colbert_vecs"]]
+        # self.cache_pad_docs_size = torch.from_numpy(np.array([x.size(0) for x in self.cache_pad_docs])).to("cuda")
+        # self.cache_pad_docs = torch.nn.utils.rnn.pad_sequence(self.cache_pad_docs, batch_first=True).to("cuda")
         
         return index_struct
 
