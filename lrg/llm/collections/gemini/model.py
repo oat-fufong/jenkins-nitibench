@@ -3,6 +3,7 @@ from typing import List, Dict
 from typing_extensions import TypedDict
 import os
 import datetime
+import json
 
 
 import google.generativeai as genai
@@ -106,10 +107,12 @@ class GeminiModel(object):
         time_taken = time.time() - start_time
         
         try:
-            content = eval(response.candidates[0].content.parts[0].text)
-        
-        except (SyntaxError, NameError):
-            content = response.candidates[0].content.parts[0].text
+            content = json.loads(response.candidates[0].content.parts[0].text)
+        except (json.JSONDecodeError, ValueError):
+            try:
+                content = eval(response.candidates[0].content.parts[0].text)
+            except (SyntaxError, NameError):
+                content = response.candidates[0].content.parts[0].text
             
         usage = response.usage_metadata
         
@@ -139,9 +142,12 @@ class GeminiModel(object):
         
         if len(response.candidates[0].content.parts) > 0:
             try:
-                content = eval(response.candidates[0].content.parts[0].text)
-            except SyntaxError:
-                content = response.candidates[0].content.parts[0].text
+                content = json.loads(response.candidates[0].content.parts[0].text)
+            except (json.JSONDecodeError, ValueError):
+                try:
+                    content = eval(response.candidates[0].content.parts[0].text)
+                except (SyntaxError, NameError):
+                    content = response.candidates[0].content.parts[0].text
                 
         else:
             content = {"analysis": "", "answer": "", "citations": []}
