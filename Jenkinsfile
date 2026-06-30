@@ -18,6 +18,10 @@ pipeline {
             defaultValue: '/app/LRG/config/all_e2e_config/lclm.yaml',
         )
         string(
+            name: 'SCRIPT_PATH',
+            defaultValue: '/app/LRG/script/response_e2e.py',
+        )
+        string(
             name: 'MOUNT_CACHE_PATH',
             defaultValue: '/mnt/filestore/nitibench/cache',
         )
@@ -36,6 +40,7 @@ pipeline {
         CONFIG_PATH = "${params.CONFIG_PATH}"
         MOUNT_CACHE_PATH = "${params.MOUNT_CACHE_PATH}"
         MOUNT_RESULT_PATH = "${params.MOUNT_RESULT_PATH}"
+        SCRIPT_PATH = "${params.SCRIPT_PATH}"
     }
 
     stages {
@@ -62,7 +67,8 @@ pipeline {
                         sh """
                         make build run exec \
                             HF_TOKEN='${HF_TOKEN}' \
-                            GEMINI_API_KEY='${GEMINI_API_KEY}'
+                            GEMINI_API_KEY='${GEMINI_API_KEY}' \
+                            SCRIPT_PATH='${SCRIPT_PATH}'
                         """
                     }
                 }

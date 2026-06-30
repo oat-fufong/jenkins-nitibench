@@ -1,3 +1,5 @@
+SCRIPT_PATH ?= /app/LRG/script/response_e2e.py
+
 clean:
 	docker stop "$(CONTAINER_NAME)" || true
 	docker rm "$(CONTAINER_NAME)" || true
@@ -25,4 +27,4 @@ run:
 
 exec:
 	docker exec "$(CONTAINER_NAME)" \
-		python /app/LRG/script/response_e2e.py --config_path=$(CONFIG_PATH)
+		python $(SCRIPT_PATH) --config_path=$(CONFIG_PATH)
