@@ -191,6 +191,7 @@ async def main(args):
                           tax_data_path = "/app/test_data/hf_tax.csv")
     
     
+    datasets = config.get("datasets", ["tax", "wangchan"])
     tax_result_path = os.path.join(config["result_dir"], "tax_response.json")
     wangchan_result_path = os.path.join(config["result_dir"], "wangchan_response.json")
     
@@ -208,38 +209,41 @@ async def main(args):
     
     
     #Read Answer
-    wangchan_result = pd.read_json(wangchan_result_path, dtype={"idx": str})
+    if "wangchan" in datasets:
+        wangchan_result = pd.read_json(wangchan_result_path, dtype={"idx": str})
 
-    result = []
-    for i, row in wangchan_result.iterrows():
+        result = []
+        for i, row in wangchan_result.iterrows():
 
-        if not isinstance(row["content"], dict):
-            result.append({**row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
-        else:
-            result.append({**row["content"], **row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
+            if not isinstance(row["content"], dict):
+                result.append({**row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
+            else:
+                result.append({**row["content"], **row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
 
-    wangchan_result = pd.DataFrame(result).rename(columns = {"answer": "student_answer", "citations": "student_citations"})
-    
-    tax_result = pd.read_json(tax_result_path, dtype={"idx": str})
+        wangchan_result = pd.DataFrame(result).rename(columns = {"answer": "student_answer", "citations": "student_citations"})
 
-    result = []
-    for i, row in tax_result.iterrows():
+    if "tax" in datasets:
+        tax_result = pd.read_json(tax_result_path, dtype={"idx": str})
 
-        if not isinstance(row["content"], dict):
-            result.append({**row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
-        else:
-            result.append({**row["content"], **row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
+        result = []
+        for i, row in tax_result.iterrows():
 
-    tax_result = pd.DataFrame(result).rename(columns = {"answer": "student_answer", "citations": "student_citations"})
-    
-    print(wangchan_result.shape)
+            if not isinstance(row["content"], dict):
+                result.append({**row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
+            else:
+                result.append({**row["content"], **row["usage"], "retrieved_ids": row["retrieved_ids"], "idx": row["idx"], "tries": row["tries"]})
+
+        tax_result = pd.DataFrame(result).rename(columns = {"answer": "student_answer", "citations": "student_citations"})
+
     #Then, merge together with actual answer
-    wangchan_df = pd.merge(dataset.wangchan_df, wangchan_result[["idx", wangchan_col_names["student_answer"], wangchan_col_names["student_laws"], wangchan_col_names["retrieved_ids"]]], left_on="idx", right_on="idx", how="inner")
-    assert wangchan_df.shape[0] == dataset.wangchan_df.shape[0], "Merge wangchan got incorrect shape. Got {} and {}".format(wangchan_df.shape, dataset.wangchan_df.shape)
-    
-    #Then, merge together with actual answer
-    tax_df = pd.merge(dataset.tax_df, tax_result[["idx", tax_col_names["student_answer"], tax_col_names["student_laws"], tax_col_names["retrieved_ids"]]], left_on="idx", right_on="idx", how="inner")
-    assert tax_df.shape[0] == dataset.tax_df.shape[0], "Merge tax got incorrect shape"
+    if "wangchan" in datasets:
+        print(wangchan_result.shape)
+        wangchan_df = pd.merge(dataset.wangchan_df, wangchan_result[["idx", wangchan_col_names["student_answer"], wangchan_col_names["student_laws"], wangchan_col_names["retrieved_ids"]]], left_on="idx", right_on="idx", how="inner")
+        assert wangchan_df.shape[0] == dataset.wangchan_df.shape[0], "Merge wangchan got incorrect shape. Got {} and {}".format(wangchan_df.shape, dataset.wangchan_df.shape)
+
+    if "tax" in datasets:
+        tax_df = pd.merge(dataset.tax_df, tax_result[["idx", tax_col_names["student_answer"], tax_col_names["student_laws"], tax_col_names["retrieved_ids"]]], left_on="idx", right_on="idx", how="inner")
+        assert tax_df.shape[0] == dataset.tax_df.shape[0], "Merge tax got incorrect shape"
     
     #Then, just call for each
     eval_retrieval = config.get("eval_retrieval", False)
@@ -249,132 +253,130 @@ async def main(args):
     tax_e2e_path = os.path.join(config["result_dir"], "tax_e2e_metrics.json")
     batch_size = config.get("batch_size", 50)
     
-    tax_e2e_metrics = []
-    
-    #Fill answer na with empty string
-    #Fill empty citations with empty list
-    tax_df = tax_df.fillna({tax_col_names["student_answer"]: "", tax_col_names["student_laws"]: ""})
-    tax_df[tax_col_names["student_laws"]] = tax_df[tax_col_names["student_laws"]].apply(lambda x: [] if x == "" else x)
-    tax_df[tax_col_names["student_laws"]] = tax_df[tax_col_names["student_laws"]].apply(convert_citations)
-    
-    for i in tqdm(range(0, len(tax_df), batch_size)):
-        #Create jobs
-        jobs = [calc_metric(row, 
-                            col_names = tax_col_names, 
-                            llm = llm,
-                            pm = pm,
-                            dataset_name = "tax",
-                            model_name = model_name,
-                            eval_retrieval = eval_retrieval,
-                            mapping = chunk_mapping if not is_golden_chunk else None) for _, row in tax_df.iloc[i: i+batch_size].iterrows()]
-        
-        tax_e2e_metrics.extend(await asyncio.gather(*jobs))
-        
-    tax_e2e_metrics = pd.DataFrame(tax_e2e_metrics)
-        
-    tax_citations = citation_score(reference_citations = tax_df[tax_col_names["reference_laws"]].tolist(),
-                                   generated_citations = tax_df[tax_col_names["student_laws"]].tolist())
-    
-    local_precision = tax_citations.pop("local_precision")
-    local_recall = tax_citations.pop("local_recall")
-    local_f1 = tax_citations.pop("local_f1")
-    
-      
-    tax_e2e_metrics["citation_score"] = [{"e2e_precision": local_precision[i],
-                                         "e2e_recall": local_recall[i],
-                                         "e2e_f1": local_f1[i]} for i in range(len(local_precision))]    
-      
-    
-        
-    #Dump
-    print("TAX DONE")
-    print("DUMPING TO ", tax_result_path)
-    tax_e2e_metrics.to_json(tax_e2e_path, orient="records")
-    #Global Metrics
-    tax_coverage = [coverage_mapper.get(r.get("coverage", dict()).get("score", "no-coverage"), 0) for r in tax_e2e_metrics["content"].tolist()]
-    tax_contradiction = [contradiction_mapper.get(r.get("contradiction", dict()).get("score", "no-contradiction"), 0) for r in tax_e2e_metrics["content"].tolist()]
-    
-    tax_citations["coverage"] = sum(tax_coverage)/len(tax_coverage)
-    tax_citations["contradiction"] = sum(tax_contradiction)/len(tax_contradiction)
-    
-    #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
-    if eval_retrieval:
-        retrieval_result = pd.DataFrame([t["retrieval_result"] for t in tax_e2e_metrics])
-        
-        for k in retrieval_result.columns:
-            if "recall" in k:
-                #Then calculate
-                lg = tax_df[tax_col_names["reference_laws"]].apply(len)
-                tax_citations["retrieval_micro_recall"] = (retrieval_result[k]*lg).sum() / lg.sum()
-            
-            tax_citations[f"retrieval_{k}"] = retrieval_result[k].mean()
-                
-    tax_global_path = os.path.join(config["result_dir"], "tax_global_metrics.json")
-    with open(tax_global_path, "w") as f:
-        json.dump(tax_citations, f)
+    if "tax" in datasets:
+        tax_e2e_metrics = []
+
+        #Fill answer na with empty string
+        #Fill empty citations with empty list
+        tax_df = tax_df.fillna({tax_col_names["student_answer"]: "", tax_col_names["student_laws"]: ""})
+        tax_df[tax_col_names["student_laws"]] = tax_df[tax_col_names["student_laws"]].apply(lambda x: [] if x == "" else x)
+        tax_df[tax_col_names["student_laws"]] = tax_df[tax_col_names["student_laws"]].apply(convert_citations)
+
+        for i in tqdm(range(0, len(tax_df), batch_size)):
+            #Create jobs
+            jobs = [calc_metric(row,
+                                col_names = tax_col_names,
+                                llm = llm,
+                                pm = pm,
+                                dataset_name = "tax",
+                                model_name = model_name,
+                                eval_retrieval = eval_retrieval,
+                                mapping = chunk_mapping if not is_golden_chunk else None) for _, row in tax_df.iloc[i: i+batch_size].iterrows()]
+
+            tax_e2e_metrics.extend(await asyncio.gather(*jobs))
+
+        tax_e2e_metrics = pd.DataFrame(tax_e2e_metrics)
+
+        tax_citations = citation_score(reference_citations = tax_df[tax_col_names["reference_laws"]].tolist(),
+                                       generated_citations = tax_df[tax_col_names["student_laws"]].tolist())
+
+        local_precision = tax_citations.pop("local_precision")
+        local_recall = tax_citations.pop("local_recall")
+        local_f1 = tax_citations.pop("local_f1")
+
+        tax_e2e_metrics["citation_score"] = [{"e2e_precision": local_precision[i],
+                                             "e2e_recall": local_recall[i],
+                                             "e2e_f1": local_f1[i]} for i in range(len(local_precision))]
+
+        #Dump
+        print("TAX DONE")
+        print("DUMPING TO ", tax_result_path)
+        tax_e2e_metrics.to_json(tax_e2e_path, orient="records")
+        #Global Metrics
+        tax_coverage = [coverage_mapper.get(r.get("coverage", dict()).get("score", "no-coverage"), 0) for r in tax_e2e_metrics["content"].tolist()]
+        tax_contradiction = [contradiction_mapper.get(r.get("contradiction", dict()).get("score", "no-contradiction"), 0) for r in tax_e2e_metrics["content"].tolist()]
+
+        tax_citations["coverage"] = sum(tax_coverage)/len(tax_coverage)
+        tax_citations["contradiction"] = sum(tax_contradiction)/len(tax_contradiction)
+
+        #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
+        if eval_retrieval:
+            retrieval_result = pd.DataFrame([t["retrieval_result"] for t in tax_e2e_metrics])
+
+            for k in retrieval_result.columns:
+                if "recall" in k:
+                    #Then calculate
+                    lg = tax_df[tax_col_names["reference_laws"]].apply(len)
+                    tax_citations["retrieval_micro_recall"] = (retrieval_result[k]*lg).sum() / lg.sum()
+
+                tax_citations[f"retrieval_{k}"] = retrieval_result[k].mean()
+
+        tax_global_path = os.path.join(config["result_dir"], "tax_global_metrics.json")
+        with open(tax_global_path, "w") as f:
+            json.dump(tax_citations, f)
     
         
         
-    wangchan_e2e_metrics = []
-    
-    wangchan_df = wangchan_df.fillna({wangchan_col_names["student_answer"]: "", wangchan_col_names["student_laws"]: ""})
-    wangchan_df[wangchan_col_names["student_laws"]] = wangchan_df[wangchan_col_names["student_laws"]].apply(lambda x: [] if x == "" else x)
-    
-    wangchan_df[wangchan_col_names["student_laws"]] = wangchan_df[wangchan_col_names["student_laws"]].apply(convert_citations)
-    
-    for i in tqdm(range(0, len(wangchan_df), batch_size)):
-        #Create jobs
-        jobs = [calc_metric(row, 
-                            col_names = wangchan_col_names, 
-                            llm = llm,
-                            pm = pm,
-                            dataset_name = "wangchan",
-                            model_name = model_name,
-                            eval_retrieval = eval_retrieval,
-                            mapping = chunk_mapping if not is_golden_chunk else None) for _, row in wangchan_df.iloc[i: i+batch_size].iterrows()]
-        
-    wangchan_e2e_metrics = pd.DataFrame(wangchan_e2e_metrics)
-        
-    wangchan_citations = citation_score(reference_citations = wangchan_df[wangchan_col_names["reference_laws"]].tolist(),
-                                   generated_citations = wangchan_df[wangchan_col_names["student_laws"]].tolist())
-    
-    local_precision = wangchan_citations.pop("local_precision")
-    local_recall = wangchan_citations.pop("local_recall")
-    local_f1 = wangchan_citations.pop("local_f1")
-    
-      
-    wangchan_e2e_metrics["citation_score"] = [{"e2e_precision": local_precision[i],
-                                         "e2e_recall": local_recall[i],
-                                         "e2e_f1": local_f1[i]} for i in range(len(local_precision))]    
-      
-    
-        
-    #Dump
-    print("WCX DONE")
-    print("DUMPING TO ", wangchan_result_path)
-    wangchan_e2e_metrics.to_json(wangchan_e2e_path, orient="records")
-    #Global Metrics
-    wangchan_coverage = [coverage_mapper.get(r.get("coverage", dict()).get("score", "no-coverage"), 0) for r in wangchan_e2e_metrics["content"].tolist()]
-    wangchan_contradiction = [contradiction_mapper.get(r.get("contradiction", dict()).get("score", "no-contradiction"), 0) for r in wangchan_e2e_metrics["content"].tolist()]
-    
-    wangchan_citations["coverage"] = sum(wangchan_coverage)/len(wangchan_coverage)
-    wangchan_citations["contradiction"] = sum(wangchan_contradiction)/len(wangchan_contradiction)
-    
-    #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
-    if eval_retrieval:
-        retrieval_result = pd.DataFrame([t["retrieval_result"] for t in wangchan_e2e_metrics])
-        
-        for k in retrieval_result.columns:
-            if "recall" in k:
-                #Then calculate
-                lg = wangchan_df[wangchan_col_names["reference_laws"]].apply(len)
-                wangchan_citations["retrieval_micro_recall"] = (retrieval_result[k]*lg).sum() / lg.sum()
-            
-            wangchan_citations[f"retrieval_{k}"] = retrieval_result[k].mean()
-    
-    wangchan_global_path = os.path.join(config["result_dir"], "wangchan_global_metrics.json")
-    with open(wangchan_global_path, "w") as f:
-        json.dump(wangchan_citations, f)
+    if "wangchan" in datasets:
+        wangchan_e2e_metrics = []
+
+        wangchan_df = wangchan_df.fillna({wangchan_col_names["student_answer"]: "", wangchan_col_names["student_laws"]: ""})
+        wangchan_df[wangchan_col_names["student_laws"]] = wangchan_df[wangchan_col_names["student_laws"]].apply(lambda x: [] if x == "" else x)
+
+        wangchan_df[wangchan_col_names["student_laws"]] = wangchan_df[wangchan_col_names["student_laws"]].apply(convert_citations)
+
+        for i in tqdm(range(0, len(wangchan_df), batch_size)):
+            #Create jobs
+            jobs = [calc_metric(row,
+                                col_names = wangchan_col_names,
+                                llm = llm,
+                                pm = pm,
+                                dataset_name = "wangchan",
+                                model_name = model_name,
+                                eval_retrieval = eval_retrieval,
+                                mapping = chunk_mapping if not is_golden_chunk else None) for _, row in wangchan_df.iloc[i: i+batch_size].iterrows()]
+
+            wangchan_e2e_metrics.extend(await asyncio.gather(*jobs))
+
+        wangchan_e2e_metrics = pd.DataFrame(wangchan_e2e_metrics)
+
+        wangchan_citations = citation_score(reference_citations = wangchan_df[wangchan_col_names["reference_laws"]].tolist(),
+                                       generated_citations = wangchan_df[wangchan_col_names["student_laws"]].tolist())
+
+        local_precision = wangchan_citations.pop("local_precision")
+        local_recall = wangchan_citations.pop("local_recall")
+        local_f1 = wangchan_citations.pop("local_f1")
+
+        wangchan_e2e_metrics["citation_score"] = [{"e2e_precision": local_precision[i],
+                                             "e2e_recall": local_recall[i],
+                                             "e2e_f1": local_f1[i]} for i in range(len(local_precision))]
+
+        #Dump
+        print("WCX DONE")
+        print("DUMPING TO ", wangchan_result_path)
+        wangchan_e2e_metrics.to_json(wangchan_e2e_path, orient="records")
+        #Global Metrics
+        wangchan_coverage = [coverage_mapper.get(r.get("coverage", dict()).get("score", "no-coverage"), 0) for r in wangchan_e2e_metrics["content"].tolist()]
+        wangchan_contradiction = [contradiction_mapper.get(r.get("contradiction", dict()).get("score", "no-contradiction"), 0) for r in wangchan_e2e_metrics["content"].tolist()]
+
+        wangchan_citations["coverage"] = sum(wangchan_coverage)/len(wangchan_coverage)
+        wangchan_citations["contradiction"] = sum(wangchan_contradiction)/len(wangchan_contradiction)
+
+        #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
+        if eval_retrieval:
+            retrieval_result = pd.DataFrame([t["retrieval_result"] for t in wangchan_e2e_metrics])
+
+            for k in retrieval_result.columns:
+                if "recall" in k:
+                    #Then calculate
+                    lg = wangchan_df[wangchan_col_names["reference_laws"]].apply(len)
+                    wangchan_citations["retrieval_micro_recall"] = (retrieval_result[k]*lg).sum() / lg.sum()
+
+                wangchan_citations[f"retrieval_{k}"] = retrieval_result[k].mean()
+
+        wangchan_global_path = os.path.join(config["result_dir"], "wangchan_global_metrics.json")
+        with open(wangchan_global_path, "w") as f:
+            json.dump(wangchan_citations, f)
     
     
     
