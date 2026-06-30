@@ -107,13 +107,13 @@ class GeminiModel(object):
         time_taken = time.time() - start_time
         
         try:
-            content = json.loads(response.candidates[0].content.parts[0].text)
+            content, _ = json.JSONDecoder().raw_decode(response.candidates[0].content.parts[0].text.strip())
         except (json.JSONDecodeError, ValueError):
             try:
                 content = eval(response.candidates[0].content.parts[0].text)
             except (SyntaxError, NameError):
                 content = response.candidates[0].content.parts[0].text
-            
+
         usage = response.usage_metadata
         
         usage = {"prompt_token_count": usage.prompt_token_count,
@@ -142,7 +142,7 @@ class GeminiModel(object):
         
         if len(response.candidates[0].content.parts) > 0:
             try:
-                content = json.loads(response.candidates[0].content.parts[0].text)
+                content, _ = json.JSONDecoder().raw_decode(response.candidates[0].content.parts[0].text.strip())
             except (json.JSONDecodeError, ValueError):
                 try:
                     content = eval(response.candidates[0].content.parts[0].text)
