@@ -4,7 +4,6 @@ clean:
 	docker stop "$(CONTAINER_NAME)" || true
 	docker rm "$(CONTAINER_NAME)" || true
 	docker rmi "$(IMAGE_NAME):$(IMAGE_TAG)" || true
-	docker builder prune -af
 
 stop:
 	docker stop "$(CONTAINER_NAME)" || true
