@@ -55,8 +55,12 @@ pipeline {
             steps {
                 withCredentials([
                     string(
-                        credentialsId: 'API_KEY',
+                        credentialsId: 'GOOGLE_API_KEY',
                         variable: 'GEMINI_API_KEY'
+                    ),
+                    string(
+                        credentialsId: 'OPENROUTER_API_KEY',
+                        variable: 'OPENROUTER_API_KEY'
                     ),
                     string(
                         credentialsId: 'HF_TOKEN',
@@ -68,6 +72,7 @@ pipeline {
                         make build run exec \
                             HF_TOKEN='${HF_TOKEN}' \
                             GEMINI_API_KEY='${GEMINI_API_KEY}' \
+                            OPENROUTER_API_KEY='${OPENROUTER_API_KEY}' \
                             SCRIPT_PATH='${SCRIPT_PATH}'
                         """
                     }
