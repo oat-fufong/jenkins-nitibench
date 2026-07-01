@@ -304,7 +304,7 @@ async def main(args):
 
         #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
         if eval_retrieval:
-            retrieval_result = pd.DataFrame([t["retrieval_result"] for t in tax_e2e_metrics])
+            retrieval_result = pd.DataFrame(tax_e2e_metrics["retrieval_result"].tolist())
 
             for k in retrieval_result.columns:
                 if "recall" in k:
@@ -367,7 +367,7 @@ async def main(args):
 
         #Another thing we want to do is calculate the global metrics for mrr, multimrr, hitrate, multihitrate and recall
         if eval_retrieval:
-            retrieval_result = pd.DataFrame([t["retrieval_result"] for t in wangchan_e2e_metrics])
+            retrieval_result = pd.DataFrame(wangchan_e2e_metrics["retrieval_result"].tolist())
 
             for k in retrieval_result.columns:
                 if "recall" in k:
