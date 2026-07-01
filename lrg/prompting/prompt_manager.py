@@ -289,12 +289,12 @@ class PromptManager(object):
 
         prompts = self.get_prompt(prompt_str=prompt_str)
         
-        base = model.split("/")[-1] if "/" in model else model
-        type_name = base.split('-')[0]
-        if type_name in ["o1", 'aisingapore/gemma2', "typhoon", "google", "openai", "meta"]:
+        if "/" in model:
             type_name = "gpt"
-        elif type_name == "anthropic":
-            type_name = "claude"
+        else:
+            type_name = model.split('-')[0]
+            if type_name in ["o1", 'aisingapore/gemma2', "typhoon"]:
+                type_name = "gpt"
 
         return eval(f"self.format_{type_name}_prompt(prompts, task= task)")
             
