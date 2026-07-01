@@ -10,11 +10,15 @@ MAP_MODEL = {"gpt": (OpenAIConfig, OpenAIModel),
              "typhoon": (OpenAIConfig, OpenAIModel)}
 
 def init_llm(config: Dict):
-    
-    name = config["model"].split("-")[0]
-    
-    assert name in MAP_MODEL, "Unrecognize model name: {}".format(model_name)
-    config_class, model_class = MAP_MODEL[name]
+
+    model = config["model"]
+    if "/" in model:
+        # OpenRouter format: provider/model-name — always use OpenAI-compatible client
+        config_class, model_class = OpenAIConfig, OpenAIModel
+    else:
+        name = model.split("-")[0]
+        assert name in MAP_MODEL, "Unrecognize model name: {}".format(name)
+        config_class, model_class = MAP_MODEL[name]
     
     model_config = config_class(**config)
     print(model_config.model_dump())

@@ -10,5 +10,5 @@ class OpenAIConfig(BaseModel):
     temperature: float = 0.5
     seed: int = 69420
     base_url: str = "https://api.openai.com/v1"
-    api_key: str = os.environ.get("OPENAI_API_KEY", "")
+    api_key: str = os.environ.get("OPENAI_API_KEY") or os.environ.get("OPENROUTER_API_KEY", "")
     

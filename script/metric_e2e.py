@@ -145,15 +145,16 @@ async def calc_metric(row: pd.Series,
 
     formatted_prompts = pm.get_formatted_prompt(query=augmented_query, task=task, dataset=dataset_name, model=model_name)
     
-    name = model_name.split("-")[0]
-    if name == "gemini":
+    base = model_name.split("/")[-1] if "/" in model_name else model_name
+    name = base.split("-")[0]
+    if name in ("gemini", "google"):
         structure = pm.response_structure[task][2]
-    elif name == "gpt":
+    elif name in ("gpt", "o1", "openai"):
         structure = pm.response_structure[task][1]
-    elif name == "claude":
+    elif name in ("claude", "anthropic"):
         structure = pm.response_structure[task][0]
     else:
-        raise ValueError("Unrecognized model name: {}".format(model_name))
+        structure = pm.response_structure[task][1]
     
     #Then, generate the response
     response = await llm.complete(**formatted_prompts, structure=structure)
