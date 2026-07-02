@@ -6,7 +6,7 @@ result_dir: /app/LRG/results/e2e/v0.1/bge_gemini_tax/golden-human-finetuned-bge-
 llm_config:
   model: google/gemini-2.5-flash-lite
   base_url: https://openrouter.ai/api/v1
-  max_tokens: 2048
+  max_tokens: 8192
   temperature: 0.3
   n: 1
 
