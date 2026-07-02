@@ -17,9 +17,9 @@ pipeline {
             name: 'CONFIG_PATH',
             defaultValue: '/app/LRG/config/all_e2e_config/lclm.yaml',
         )
-        string(
+        choice(
             name: 'SCRIPT_PATH',
-            defaultValue: '/app/LRG/script/response_e2e.py',
+            choices: ['/app/LRG/script/response_e2e.py', '/app/LRG/script/metric_e2e.py'],
         )
         string(
             name: 'MOUNT_CACHE_PATH',
