@@ -1,0 +1,15 @@
+chunk_node_path: /app/LRG/chunking/reduced_golden/nodes.json
+golden_node_path: /app/LRG/chunking/reduced_golden/nodes.json
+
+result_dir: /app/LRG/results/e2e/v0.1/bge_gemini_tax/golden-human-finetuned-bge-m3-no-ref-gemini-1.5-pro
+
+llm_config:
+  model: openai/gpt-4o-mini
+  base_url: https://openrouter.ai/api/v1
+  max_tokens: 2048
+  temperature: 0.3
+  n: 1
+
+eval_retrieval: True
+batch_size: 50
+datasets: ["tax"]
